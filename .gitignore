@@ -84,3 +84,8 @@ ipython_config.py
 
 # My stuff
 .env
+uc_transactions.db
+uc_transactions.db-shm
+uc_transactions.db-wal
+.vs
+sqlitetutorial.py

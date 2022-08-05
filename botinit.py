@@ -1,41 +1,52 @@
 import asqlite
+import asyncio
 
-dbconnect=asqlite.connect("uc_db")
-dbcursor=dbconnect.cursor()
 
 async def initialize_tables():
-    await dbcursor.execute("""CREATE TABLE buy_orders
-                        OrderID int NOT NULL AUTO_INCREMENT,
-                        OrderTime timestamp DEFAULT GETDATE(),
-                        OrderAuthor text,
-                        BuyingOrg text,
-                        BuyingItem text,
-                        BuyingQuantity int,
-                        CompensationItem text,
-                        CompensationQuantity int
-                        """)
+    async with asqlite.connect("uc_transactions.db") as conn:
+        async with conn.cursor() as cursor:
 
-    await dbcursor.execute("""CREATE TABLE sell_orders
-                        OrderID int NOT NULL AUTO_INCREMENT,
-                        OrderTime timestamp DEFAULT GETDATE(),
-                        OrderAuthor text,
-                        SellingOrg text,
-                        SellingItem text,
-                        SellingQuantity int,
-                        CompensationItem text,
-                        CompensationQuantity int
-                        """)
+            await cursor.execute(
+                """CREATE TABLE buy_orders (
+                                    OrderID INTEGER PRIMARY KEY, 
+                                    OrderTime DATETIME DEFAULT CURRENT_TIMESTAMP, 
+                                    OrderAuthor INTEGER, 
+                                    BuyingOrg TEXT, 
+                                    BuyingItem TEXT, 
+                                    BuyingQuantity INTEGER, 
+                                    CompensationItem TEXT, 
+                                    CompensationQuantity INTEGER);
+                                    """
+            )
 
-    await dbcursor.execute("""CREATE TABLE completed_orders
-                        OrderID int NOT NULL AUTO_INCREMENT,
-                        OrderTime timestamp DEFAULT GETDATE(),
-                        OrderAuthor text,
-                        SellingOrg text,
-                        SellingItem text,
-                        SellingQuantity int,
-                        BuyingOrg text,
-                        CompensationItem text,
-                        CompensationQuantity int
-                        """)
+            await cursor.execute(
+                """CREATE TABLE sell_orders (
+                                    OrderID INTEGER PRIMARY KEY,
+                                    OrderTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                    OrderAuthor INTEGER,
+                                    SellingOrg TEXT,
+                                    SellingItem TEXT,
+                                    SellingQuantity INTEGER,
+                                    CompensationItem TEXT,
+                                    CompensationQuantity INTEGER);
+                                    """
+            )
 
-    await dbconnect.commit()
+            await cursor.execute(
+                """CREATE TABLE completed_orders (
+                                    OrderID INTEGER PRIMARY KEY,
+                                    OrderTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                    OrderAuthor INTEGER,
+                                    SellingOrg TEXT,
+                                    SellingItem TEXT,
+                                    SellingQuantity INTEGER,
+                                    BuyingOrg TEXT,
+                                    CompensationItem TEXT,
+                                    CompensationQuantity INTEGER)
+                                    """
+            )
+
+            await conn.commit()
+
+
+asyncio.run(initialize_tables())
