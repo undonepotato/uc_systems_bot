@@ -10,7 +10,7 @@ from datetime import datetime
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 
-bot_version = "0.1.5"
+bot_version = "0.1.7"
 intents = discord.Intents().all()
 
 
@@ -24,11 +24,13 @@ class Bot(commands.Bot):
 bot = Bot(command_prefix=".", intents=intents)
 
 
-class NegotiationButton(discord.ui.View):
+class BuyNegotiationButton(discord.ui.View):
     @discord.ui.button(label="Open Channel", style=discord.ButtonStyle.success)
     async def negotiate(
         self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    ):  
+        await cursor.execute("DELETE FROM buy_orders WHERE OrderID=?",(buy_id))
+
         ntcnameverify = True
 
         while ntcnameverify:
@@ -38,14 +40,9 @@ class NegotiationButton(discord.ui.View):
                     continue
                 else:
                     ntcnameverify = False
-
+        
         created_channel = await bot.get_guild(995534833197535302).create_text_channel(
             name=newchannelname,
-            overwrites={
-                interaction.user: discord.PermissionOverwrite(
-                    read_messages=True, send_messages=True
-                )
-            },
             category=bot.get_channel(1005548377167118367),
             position=500,
         )
@@ -53,6 +50,35 @@ class NegotiationButton(discord.ui.View):
         await interaction.response.send_message(
             f"Channel opened! {created_channel.mention}", ephemeral=True
         )
+
+
+class SellNegotiationButton(discord.ui.View):
+    @discord.ui.button(label="Open Channel", style=discord.ButtonStyle.success)
+    async def negotiate(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):  
+        await cursor.execute("DELETE FROM sell_orders WHERE OrderID=?",(buy_id))
+
+        ntcnameverify = True
+
+        while ntcnameverify:
+            newchannelname = f"trade-{random.randint(0,99999)}"
+            for channel in bot.get_guild(995534833197535302).channels:
+                if newchannelname == channel.name:
+                    continue
+                else:
+                    ntcnameverify = False
+        
+        created_channel = await bot.get_guild(995534833197535302).create_text_channel(
+            name=newchannelname,
+            category=bot.get_channel(1005548377167118367),
+            position=500,
+        )
+
+        await interaction.response.send_message(
+            f"Channel opened! {created_channel.mention}", ephemeral=True
+        )
+        
 
 
 class UCLButton(discord.ui.View):
@@ -88,6 +114,7 @@ async def buyoffer(
     org: str,
     additional_info="",
 ):
+    global buy_id
 
     await cursor.execute(  # Insert into transactions database
         """INSERT INTO buy_orders (
@@ -113,6 +140,16 @@ async def buyoffer(
 
     await conn.commit()  # Commit insert
 
+    await cursor.execute("""
+    SELECT OrderID FROM buy_orders WHERE
+    OrderAuthor=? AND BuyingOrg=? AND BuyingItem=? AND BuyingQuantity=? AND CompensationItem=? AND CompensationQuantity=?""",
+   (ctx.author.id, org, item_to_buy, buying_quantity, item_to_pay, payment_quantity,))
+    
+    _ = await cursor.fetchall()
+    buy_id_list = _[0]
+    buy_id = buy_id_list[0]
+
+
     embed_title = f"{org} Buy Offer"
 
     buyembed = discord.Embed(  # Makes the embed to be sent in buy-offers
@@ -137,13 +174,14 @@ async def buyoffer(
 
     if len(buyembed) < 6000:
         await bot.get_channel(997310714219855962).send(
-            embed=buyembed, view=NegotiationButton()
+            embed=buyembed, view=BuyNegotiationButton()
         )
     else:
         await ctx.send(
             "Your embed is too long! The maximum limit is 6000 characters.",
             ephemeral=True,
         )
+    await ctx.send("Listing successful!")
 
 
 @bot.command(
@@ -208,7 +246,7 @@ async def selloffer(
 
     if len(sellembed) < 6000:
         await bot.get_channel(997310731026432042).send(
-            embed=sellembed, view=NegotiationButton()
+            embed=sellembed, view=SellNegotiationButton()
         )
     else:
         await ctx.send(
@@ -340,7 +378,7 @@ async def tradecomplete(
 
 @bot.command(name="version", help="Returns version info.")
 async def version(ctx):
-    await ctx.send(f"Bot version {bot_version}, discord.py {discord.__version__}")
+    await ctx.send(f"Bot version {bot_version}, discord.py {discord.__version__}. Main branch.")
 
 
 bot.run(TOKEN)
